@@ -1,33 +1,28 @@
 package com.example.myapplication;
 
-import android.annotation.SuppressLint;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import java.util.Random;
-
 public class MainActivity extends AppCompatActivity {
-    private EditText inputNumber;
-    private TextView infoText;
-    private LinearLayout linearLayout;
-    private TextView textView;
-    private Button restart;
-    private Button submit;
-    private int random;
-    private final Random rand = new Random();
+    private EditText newNumber;
+    private EditText result;
+    private TextView displayOperation;
+
+    private Double operand1;
+    private String pendingOperation = "=";
+
+    private static final String STATE_PENDING_OPERATION = "PendingOperation";
+    private static final String STATE_OPERAND1 = "Operand1";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,76 +34,129 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        inputNumber = findViewById(R.id.inputNumber);
-        infoText = findViewById(R.id.infoText);
-        linearLayout = findViewById(R.id.linearLayout);
-        textView = findViewById(R.id.textView);
-        restart = findViewById(R.id.restart);
-        submit = findViewById(R.id.submit);
-        textView.setText("");
-        random = rand.nextInt(10);
-        View.OnClickListener listenerSubmit = v -> {
-            String info;
-            if (inputNumber.getText().toString().equals(String.valueOf(random))){
-                info = "Tebrikler doğru tahmin!";
-            }else {
-                info = "Yanlış tahmin!";
-                if (Integer.parseInt(inputNumber.getText().toString()) > random){
-                    info += "\nDaha küçük bir sayı giriniz.";
-                }else {
-                    info += "\nDaha büyük bir sayı giriniz";
-                }
-                if (linearLayout.getChildCount() > 0){
-                    linearLayout.removeViewAt(linearLayout.getChildCount() - 1);
-                }else{
-                    inputNumber.setEnabled(false);
+
+        newNumber = findViewById(R.id.newNumber);
+        result = findViewById(R.id.result);
+        displayOperation = findViewById(R.id.operation);
+
+        Button btn_0 = findViewById(R.id.btn_0);
+        Button btn_1 = findViewById(R.id.btn_1);
+        Button btn_2 = findViewById(R.id.btn_2);
+        Button btn_3 = findViewById(R.id.btn_3);
+        Button btn_4 = findViewById(R.id.btn_4);
+        Button btn_5 = findViewById(R.id.btn_5);
+        Button btn_6 = findViewById(R.id.btn_6);
+        Button btn_7 = findViewById(R.id.btn_7);
+        Button btn_8 = findViewById(R.id.btn_8);
+        Button btn_9 = findViewById(R.id.btn_9);
+        Button btn_dot = findViewById(R.id.btn_dot);
+        Button btn_equals = findViewById(R.id.btn_equals);
+        Button btn_plus = findViewById(R.id.btn_plus);
+        Button btn_minus = findViewById(R.id.btn_minus);
+        Button btn_multiply = findViewById(R.id.btn_multiply);
+        Button btn_slash = findViewById(R.id.btn_slash);
+        Button btn_neg = findViewById(R.id.btn_neg);
+
+        View.OnClickListener listener = v -> {
+            Button b = (Button) v;
+            newNumber.append(b.getText().toString());
+        };
+        btn_0.setOnClickListener(listener);
+        btn_1.setOnClickListener(listener);
+        btn_2.setOnClickListener(listener);
+        btn_3.setOnClickListener(listener);
+        btn_4.setOnClickListener(listener);
+        btn_5.setOnClickListener(listener);
+        btn_6.setOnClickListener(listener);
+        btn_7.setOnClickListener(listener);
+        btn_8.setOnClickListener(listener);
+        btn_9.setOnClickListener(listener);
+        btn_dot.setOnClickListener(listener);
+
+        View.OnClickListener opListener = v -> {
+            Button b = (Button) v;
+            String op = b.getText().toString();
+            String value = newNumber.getText().toString();
+            try {
+                Double doubleValue = Double.valueOf(value);
+                performOperation(doubleValue,op);
+            }catch (NumberFormatException e){
+                newNumber.setText("");
+            }
+            pendingOperation = op;
+            displayOperation.setText(pendingOperation);
+        };
+
+        btn_equals.setOnClickListener(opListener);
+        btn_plus.setOnClickListener(opListener);
+        btn_minus.setOnClickListener(opListener);
+        btn_multiply.setOnClickListener(opListener);
+        btn_slash.setOnClickListener(opListener);
+
+        btn_neg.setOnClickListener(view -> {
+            String value = newNumber.getText().toString();
+            if (value.isEmpty()) {
+                newNumber.setText("-");
+            }else{
+                try {
+                    Double doubleValue = Double.valueOf(value);
+                    doubleValue *= -1;
+                    newNumber.setText(String.valueOf(doubleValue));
+                }catch (NumberFormatException e){
+                    newNumber.setText("");
                 }
             }
-            infoText.setText(info);
-        };
-        View.OnClickListener listenerRestart = v -> {
-            @SuppressLint("UnsafeIntentLaunch") Intent intent = getIntent();
-
-            finish();
-
-            startActivity(intent);
-        };
-        restart.setOnClickListener(listenerRestart);
-        submit.setOnClickListener(listenerSubmit);
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-    }
-
-    @Override
-    public void onRestoreInstanceState(@Nullable Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-    }
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
+        });
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putString(STATE_PENDING_OPERATION,pendingOperation);
+        if (operand1 != null){
+            outState.putDouble(STATE_OPERAND1,operand1);
+        }
         super.onSaveInstanceState(outState);
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        pendingOperation = savedInstanceState.getString(STATE_PENDING_OPERATION);
+        operand1 = savedInstanceState.getDouble(STATE_OPERAND1);
+        displayOperation.setText(pendingOperation);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-    }
+    private void performOperation(Double value, String operation){
+        if(operand1==null){
+            operand1 = value;
+        }else{
+            if (pendingOperation.equals("=")) {
+                pendingOperation = operation;
+            }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
+            switch (pendingOperation){
+                case "=":
+                    operand1 = value;
+                    break;
+                case "/":
+                    if (value == 0) {
+                        operand1 = 0.0;
+                    }else {
+                        operand1 /= value;
+                    }
+                    break;
+                case "*":
+                    operand1 *= value;
+                    break;
+                case "+":
+                    operand1 += value;
+                    break;
+                case "-":
+                    operand1 -= value;
+                    break;
+            }
+            result.setText(String.valueOf(operand1));
+            newNumber.setText("");
+        }
     }
 }
